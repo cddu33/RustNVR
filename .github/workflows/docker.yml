@@ -1,8 +1,10 @@
 # Checks the code, then (only if every check passes) builds the Docker image
-# and publishes it to the GitHub registry:
-#   ghcr.io/guiyomee/rustnvr:latest       every push to main
-#   ghcr.io/guiyomee/rustnvr:2026.11.01   a release tag v2026.11.01
-#   ghcr.io/guiyomee/rustnvr:sha-abc1234  every build
+# and publishes it to the GitHub registry of the repository's owner
+# (ghcr.io/guiyomee/rustnvr for the official repository, a fork's own name
+# otherwise):
+#   ghcr.io/<owner>/rustnvr:latest       every push to main
+#   ghcr.io/<owner>/rustnvr:2026.11.01   a release tag v2026.11.01
+#   ghcr.io/<owner>/rustnvr:sha-abc1234  every build
 # Pull requests are checked, never published.
 name: Checks and Docker image
 
@@ -75,11 +77,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Registry names must be lowercase. A fork publishes under its own
+      # name: it cannot write to the official repository's package.
+      - id: image
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/rustnvr" >> "$GITHUB_OUTPUT"
+
       - id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
-          # Registry names must be lowercase.
-          images: ghcr.io/guiyomee/rustnvr
+          images: ${{ steps.image.outputs.image }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=match,pattern=v(.*),group=1
